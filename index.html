@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background-color: #f7f9fc;
+            display: grid;
+            place-items: center;  /* Center the content vertically and horizontally */
+            gap: 40px;
+        }
+
+        /* Container to hold both sections */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;  /* 1.5x wider right section */
+            gap: 40px;
+            width: 90%;
+            max-width: 1200px;
+            height: 80vh;  /* Ensure the height is proportional */
+        }
+
+        /* Left Section (Chatbox) */
+        #chat-box {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #messages {
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            height: 300px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .user-message, .bot-message {
+            padding: 8px 12px;
+            border-radius: 20px;
+            margin: 10px 0;
+        }
+
+        .user-message {
+            background-color: #e0f7fa;
+            text-align: right;
+        }
+
+        .bot-message {
+            background-color: #e8f5e9;
+            text-align: left;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 1em;
+            width: 100%;
+            box-sizing: border-box;
+            margin-right: 12px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+
+        button {
+            padding: 12px 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s;
+            width: 120px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Right Section */
+        #right-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;  /* Allow scrolling */
+            height: 100%;  /* Take the full available height */
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: #333;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            color: #555;
+        }
+
+        p {
+            font-size: 1.1em;
+            color: #777;
+            line-height: 1.8;
+            max-height: 300px;  /* Limit the height of the paragraph */
+            overflow-y: auto;  /* Enable scrolling */
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Main container with both sections -->
+    <div class="container">
+        <!-- Left Section (Chatbox) -->
+        <div id="chat-box">
+            <div id="messages"></div>
+            <div style="display: flex; gap: 12px;">
+                <input type="text" id="user-input" placeholder="Ask a question..." onkeydown="checkEnter(event)" />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <!-- Right Section (Content) -->
+        <div id="right-section">
+            <h1>Welcome to Chatbot</h1>
+            <h2>Message based on following data only <br> (example: what are your working hours?)</h2>
+            <p>
+                1. Clinic Hours:
+   - Our dental clinic is open from 10 AM to 5 PM every day, Monday through Friday.
+   - We are available from 10:00 AM to 5:00 PM, Monday to Friday.
+   - You can visit us anytime between 10 AM and 5 PM for your dental care needs.
+   - Our working hours are from 10 AM to 5 PM, Monday to Friday.
+   - What time do we open? From 10 AM to 5 PM every weekday.
+   - The clinic opens at 10 AM and closes at 5 PM, Monday through Friday.
+   - We’re here for you Monday to Friday, from 10 AM to 5 PM, for all dental services.
+   - Visit us anytime between 10 AM and 5 PM, Monday through Friday.
+   - Our doors are open from 10 AM to 5 PM, Monday to Friday, for all your dental needs.
+   - Whether it’s a routine check-up or a dental emergency, we’re open from 10 AM to 5 PM on weekdays.
+   - We are closed on weekends and public holidays, but we’re happy to assist you during our regular hours.
+   - Our weekend hours are limited, so please schedule any non-urgent appointments for weekdays.
+   - If you need an appointment outside of our standard hours, please inquire about our extended hours or availability.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Function to send user input to the Flask API and get the response
+        function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            if (userInput.trim() === "") return;  // Don't send empty messages
+
+            const messagesContainer = document.getElementById('messages');
+
+            // Display user message
+            messagesContainer.innerHTML += `<div class="user-message">You: ${userInput}</div>`;
+
+            // Send the question to the Flask backend at the '/chatbot' endpoint
+            fetch('http://localhost:5000/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display bot's response
+                if (data.answer) {
+                    messagesContainer.innerHTML += `<div class="bot-message">Bot: ${data.answer}</div>`;
+                } else if (data.error) {
+                    messagesContainer.innerHTML += `<div class="bot-message">Bot: Error: ${data.error}</div>`;
+                } else {
+                    messagesContainer.innerHTML += `<div class="bot-message">Bot: I couldn't understand that. Please try again.</div>`;
+                }
+                document.getElementById('user-input').value = '';  // Clear the input
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;  // Scroll to the bottom
+            })
+            .catch(error => {
+                // Catch any errors and notify the user
+                messagesContainer.innerHTML += `<div class="bot-message">Bot: Something went wrong, please try again later.</div>`;
+            });
+        }
+
+        // Function to check for Enter key press
+        function checkEnter(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+    </script>
+
+</body>
+</html>
