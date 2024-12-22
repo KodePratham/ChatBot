@@ -1,16 +1,21 @@
 from flask import Flask, request, jsonify
 from transformers import pipeline
 from flask_cors import CORS  # Import CORS from flask_cors
+import logging
 
+# Initialize Flask app
 app = Flask(__name__)
 
-# Enable CORS for all routes
-CORS(app)  # This allows cross-origin requests (for frontend to access backend)
+# Enable CORS for all routes (Allows cross-origin requests from frontend)
+CORS(app)
 
-# Initialize the Hugging Face pipeline
-qa_pipeline = pipeline("question-answering")
+# Set up logging for better error tracking
+logging.basicConfig(level=logging.DEBUG)
 
-# Define your FAQ/context with greetings added
+# Initialize the Hugging Face question-answering pipeline with a specific model
+qa_pipeline = pipeline("question-answering", model="distilbert-base-cased-distilled-squad")
+
+# Define FAQ/context with information about clinic hours
 faq_context = """
 1. Clinic Hours:
    - Our dental clinic is open from 10 AM to 5 PM every day, Monday through Friday.
@@ -29,24 +34,31 @@ faq_context = """
    - Evening or weekend appointments may be available for urgent dental care on a case-by-case basis.
 """
 
+# Define the /chatbot endpoint
 @app.route("/chatbot", methods=["POST"])
 def chatbot():
-    # Get the question from the user
+    # Get the user's question from the incoming request
     user_question = request.json.get("question")
     
+    # If no question is provided, return an error
     if not user_question:
         return jsonify({"error": "No question provided"}), 400
 
     try:
+        # Perform question answering using Hugging Face pipeline
         result = qa_pipeline(question=user_question, context=faq_context)
         
-        if result['score'] > 0.2:  # Confidence threshold
+        # Only return an answer if the confidence score is above 0.2
+        if result['score'] > 0.2:
             return jsonify({"answer": result['answer']})
         else:
             return jsonify({"answer": "Please get help about that topic at support@example.com."})
     
     except Exception as e:
+        # Log the error and return a friendly message to the user
+        app.logger.error(f"Error processing question: {str(e)}")
         return jsonify({"error": f"Something went wrong: {str(e)}"}), 500
 
-# No need to call app.run() when deploying to Vercel
-  
+# Make sure the app runs in local development if the script is run directly
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
